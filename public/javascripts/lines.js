@@ -1,51 +1,61 @@
 // globals so others can use
-var startTime;
-var endTime;
-var lines_init = function() {
-  
-    var numberOfLines, stats = null, openArray, renderArray, closeArray, 
-    difference, leftBarTime, rightBarTime, lineGraphWidth, 
-    lineGraphHeight, lineGraph, width_count, height_count, box_size,
-    pad, // this is for when there are tons of apps
-    allTheLines, hsl, colorArray, diff, appArray, nameArray, 
-    minRange, maxRange, interval, boxes, activeArray, playTimeline = false, 
-    layer, toggle = false, frequencies = [],
+var startTime,
+    endTime,
+    lines_minRange,
+    lines_maxRange,
+    frequencies = [],
+    frequency_line,
     MS_IN_DAY = 86400000,               // milliseconds in a day
     MS_IN_WEEK = 604800000,             // milliseconds in a week 
     MS_IN_MONTH = 26297000000000,
-    frequency_line;
+    playTimeline = false,
+    lines_appArray,
+    lines_activeArray,
+    lineGraphWidth,
+    lines_stats=null,
+    lines_difference,
+    lines_diff;
+
+var lines_init = function() {  
+var numberOfLines, openArray, renderArray, closeArray, 
+    leftBarTime, rightBarTime, 
+    lineGraphHeight, lineGraph, width_count, height_count, box_size,
+    pad, // this is for when there are tons of apps
+    allTheLines, hsl, colorArray, nameArray, 
+    interval, boxes, 
+    layer, toggle = false;
 
     $(document).ready(function() {
         var data = APP_DATA.apps;
-        stats = data;
+        lines_stats = data;
         numberOfLines = 0;
         startTime = 1.7976931348623157E+10308;
         endTime = 0;
 
         //app container
-        appArray = [];
+        lines_appArray = [];
         nameArray = [];
 
         var i = 0;
-        for (var key in stats) {
-            if (stats.hasOwnProperty(key)) {
-                appArray[i] = key;
-                nameArray[i] = stats[i].url;
+        for (var key in lines_stats) {
+            if (lines_stats.hasOwnProperty(key)) {
+                lines_appArray[i] = key;
+                nameArray[i] = lines_stats[i].url;
                 i++;
             }
         }
 
         //store colors for each app
         colorArray = [];
-        activeArray = [];
+        lines_activeArray = [];
 
         //initiate the variables
-        for (var i = 0; i < appArray.length; i++) {
-            var index = appArray[i];
-            var lengthA = stats[index]['open'].length;
-            var startTimeA = stats[index]['open'][0];
+        for (var i = 0; i < lines_appArray.length; i++) {
+            var index = lines_appArray[i];
+            var lengthA = lines_stats[index]['open'].length;
+            var startTimeA = lines_stats[index]['open'][0];
             var endTimeA = 
-                stats[index]['close'][stats[index]['close'].length - 1];
+                lines_stats[index]['close'][lines_stats[index]['close'].length - 1];
 
             numberOfLines = numberOfLines + lengthA;
 
@@ -55,10 +65,10 @@ var lines_init = function() {
             if (endTimeA > endTime) {
                 endTime = endTimeA;
             }
-            colorArray[i] = i * (360 / appArray.length);
-            activeArray[i] = true;
+            colorArray[i] = i * (360 / lines_appArray.length);
+            lines_activeArray[i] = true;
         }
-        difference = endTime - startTime;
+        lines_difference = endTime - startTime;
 
         //line graph dimensions
         lineGraphWidth = WINDOW_WIDTH - 250;
@@ -68,7 +78,7 @@ var lines_init = function() {
 
         // subtract height based on number of apps;
         width_count = Math.floor((lineGraphWidth - pad) / box_size);
-        height_count = Math.ceil(appArray.length / width_count);
+        height_count = Math.ceil(lines_appArray.length / width_count);
 
         if (height_count > 1)
             lineGraphHeight = lineGraphHeight - height_count * 15;
@@ -87,14 +97,27 @@ var lines_init = function() {
         initFreqLine();
         initViewControls();
 
+        $("#timeline").on("valuesChanged", function(e, data) {
+            calculateRender(
+                Math.round(data.values.min), 
+                Math.round(data.values.max), 0);
+            //updateSliderDates(getDate(data.values.min), 
+                //getDate(data.values.max));
+        });
+
+        //initial loading of lines
+        calculateRender(
+            $("#timeline").rangeSlider("min"), 
+            $("#timeline").rangeSlider("max"), 1);
+
         $('#container-toggle').click(function() {
             if (!$(this).hasClass("menu-button-active")) { // NOT active
                 $('#container-toggle')[0].src = "img/ui_icons/up.png";
                 $("#container").stop().animate({
-                    top: $("#container").height() - 40 // fix
+                    top: $("#container").height() - 23 // fix
                 }, 300);
                 $("#appname").stop().animate({
-                    top: $("#container").height() - 40
+                    top: $("#container").height() - 23
                 }, 300);
                 // update the height of the lines
                 lineGraphHeight -= 60;
@@ -128,269 +151,6 @@ var lines_init = function() {
     });
 
     /*************************************************************************
-     * Timeline
-     */
-
-    //Given an index which is slider_min < index < slider_max
-    //Calculates number of active apps at that index
-    function calcFreq(index) {
-        var start = index;
-        var end = index + 1;
-        left = startTime + (difference * start) / (100);
-        right = startTime + (difference * end) / (100);
-        diff = right - left;
-
-        for (var i = 0; i < appArray.length; i++) {
-            if (activeArray[i]) {
-                var app = appArray[i];
-                openings = stats[app]['open'];
-                closings = stats[app]['close'];
-
-                for (var j = 0; j < openings.length; j++) {
-                    if ((openings[j] > left) && (closings[j] < right)) {
-                        frequencies[index] = frequencies[index] + 1;
-                    }
-                }
-            }
-        }
-    }
-
-    function updateFrequencies () {
-        for (var i = minRange; i < maxRange - 1; i++) {
-            frequencies[i] = 0;
-            calcFreq(i);
-        }
-    }
-
-    function tweenPath() {
-    var w = lineGraphWidth + 22, 
-        h = 25,
-
-        freqMax = Math.max.apply(null, frequencies),
-
-        x = d3.scale.linear()
-                .domain([0, 100])
-                .range([0, w]),
-
-        y = d3.scale.linear()
-                .domain([-freqMax / 10, freqMax])
-                .range([h, 0]);
-
-        line = d3.svg.line()
-                .x(function(d, i) {
-                  return x(i);
-                })
-                .y(function(d) {
-                  return y(d);
-                });
-
-        d3.selectAll("path")
-            .data([frequencies])
-            .transition()
-            .duration(500)
-            .attr("d", line);
-    }
-
-    function initFreqLine() {
-        updateFrequencies();
-        $("#timeline_panel").css("width", lineGraphWidth);
-
-    var w = lineGraphWidth + 22, 
-        h = 25,
-
-        freqMax = Math.max.apply(null, frequencies),
-
-        x = d3.scale.linear()
-                .domain([0, 100])
-                .range([0, w]),
-
-        y = d3.scale.linear()
-                .domain([-freqMax / 10, freqMax])
-                .range([h, 0]),
-
-        line = d3.svg.line()
-                .x(function(d, i) {
-                  return x(i);
-                })
-                .y(function(d) {
-                  return y(d);
-                });
-
-    var graph = d3.select(".frequency-container")
-                .append("svg")
-                .attr("width", w)
-                .attr("height", h);
-
-        graph.append("svg:path")
-            .attr("d", line(frequencies))
-            .attr("class", "frequency-line");
-    }
-
-    function initSlider() {
-        minRange = 0, 
-        maxRange = 100;
-
-        $("#timeline").rangeSlider({
-            arrows : false,
-            defaultValues : {
-                min : maxRange * .00,
-                max : maxRange * 1.00
-            },
-            valueLabels : "hide",
-            bounds : {
-                min : minRange,
-                max : maxRange
-            }
-        });
-
-        //Set slider label dates to the min and max
-        updateSliderDates(
-            getDate($("#timeline").rangeSlider("min")), 
-            getDate($("#timeline").rangeSlider("max")));
-
-        $("#timeline").on("valuesChanging", function(e, data) {
-            updateSliderDates(
-                getDate(data.values.min), 
-                getDate(data.values.max));
-        });
-
-        $("#timeline").on("valuesChanged", function(e, data) {
-            calculateRender(
-                Math.round(data.values.min), 
-                Math.round(data.values.max), 0);
-            //updateSliderDates(getDate(data.values.min), 
-                //getDate(data.values.max));
-        });
-
-        $("#timeline_play_pause").click(function() {
-            play(this);
-        });
-
-        $("#timeline_step_back").click(function() {
-            stepBackward(10);
-        });
-
-        $("#timeline_step_forward").click(function() {
-            stepForward(10);
-        });
-
-        //initial loading of lines
-        calculateRender(
-            $("#timeline").rangeSlider("min"), 
-            $("#timeline").rangeSlider("max"), 1);
-
-        //slight edit to the jQRange html
-        $(".ui-rangeSlider-container")
-            .prepend("<div class='frequency-container'></div>");
-    }
-
-    function initViewControls() {
-        $('#timeline_day_view').click(function () {
-            viewActivity('DAY');
-        });
-
-        $('#timeline_week_view').click(function () {
-            viewActivity('WEEK');
-        });
-
-        $('#timeline_month_view').click(function () {
-            viewActivity('MONTH');
-        });
-    }
-
-    function updateSliderDates(dateLeft, dateRight) {
-        var dl = dateLeft, dr = dateRight;
-        $("#timeline_dateLeft")
-            .text($.datepicker.formatDate('MM dd, yy', dl));
-        $("#timeline_dateRight")
-            .text($.datepicker.formatDate('MM dd, yy', dr));
-    }
-
-    //Gets the date of a certain index on the slider
-    function getDate(index) {
-        var date = startTime + (difference * index) / (100);
-        return new Date(date * 1000);
-    }
-
-    /*
-     * Date Selector: view activity in the past day, week, or month
-     * 
-     */
-    function viewActivity(time_range) {
-    var ms,     //milliseconds
-        result;
-        switch (time_range) {
-            case 'DAY': 
-                ms = MS_IN_DAY;   
-                break;
-            case 'WEEK':
-                ms = MS_IN_WEEK;
-                break;
-            case 'MONTH': 
-                ms = MS_IN_MONTH;
-                break;
-            default:
-                ms = MS_IN_DAY;
-                break;
-        }
-        result = Math.floor(100-((1/((endTime-startTime) / (ms/1000)))*100));
-        result = result >= 0 ? result : 0;
-        $("#timeline").rangeSlider("max", 100);
-        $("#timeline").rangeSlider("min", result);
-        updateSliderDates(getDate(result), getDate(100));
-    }
-
-    /*
-     * Animation Controls
-     */
-    function stepBackward(stepInterval) {
-        var tMin = $("#timeline").rangeSlider("min");
-        if (tMin > minRange) {
-            $("#timeline").rangeSlider('scrollLeft', stepInterval);
-        } else {
-            var tMax = $("#timeline").rangeSlider("max");
-            $("#timeline").rangeSlider("max", tMax - stepInterval);
-        }
-
-        updateSliderDates(
-            getDate($("#timeline").rangeSlider("min")), 
-            getDate($("#timeline").rangeSlider("max")));
-    }
-
-    function stepForward(stepInterval) {
-        var tMax = $("#timeline").rangeSlider("max");
-        var tMin = $("#timeline").rangeSlider("min");
-        if (tMax < maxRange) {
-            $("#timeline").rangeSlider('scrollRight', stepInterval);
-        } else if (tMax === tMin) {
-            $("#timeline").rangeSlider("min", minRange);
-        } else {
-            $("#timeline").rangeSlider("min", tMin + stepInterval * .1);
-        }
-
-        updateSliderDates(
-            getDate($("#timeline").rangeSlider("min")), 
-            getDate($("#timeline").rangeSlider("max")));
-    }
-
-    function play(obj) {
-        playTimeline = !playTimeline;
-        if (playTimeline) {
-            interval = setInterval(function() {
-                stepForward(1)
-            }, 10);
-            obj.src = "img/controls/controls_pause.gif";
-        } else {
-            pause(obj);
-        }
-    }
-
-    function pause(obj) {
-        clearInterval(interval);
-        obj.src = "img/controls/controls_play.gif";
-    }
-
-    /*************************************************************************
      * Line Generation
      */
     //generates the lines for an app : OPTIMIZE
@@ -412,9 +172,9 @@ var lines_init = function() {
                 .attr("class", string)
                 .attr("number", openArray[i])
                 .style("stroke-width", 3)
-                .style("stroke", "hsl(" + colorArray[index] + ",50%, 50%)");
+                .style("stroke", COLORS[index]);//"hsl(" + colorArray[index] + ",50%, 50%)");
 
-            var x = (closeArray[i] - openArray[i]) / diff + .5;
+            var x = (closeArray[i] - openArray[i]) / lines_diff+ .5;
             currentLine.style("stroke-opacity", x);
         }
         createAllTheHovers();
@@ -424,21 +184,21 @@ var lines_init = function() {
     //renders the lines for each selected app
     function calculateRender(startValIndex, endValIndex, first) {
         d3.selectAll("line").remove();
-        leftBarTime = startTime + (difference * startValIndex) / (100);
-        rightBarTime = startTime + (difference * endValIndex) / (100);
-        diff = rightBarTime - leftBarTime;
+        leftBarTime = startTime + (lines_difference * startValIndex) / (100);
+        rightBarTime = startTime + (lines_difference * endValIndex) / (100);
+        lines_diff= rightBarTime - leftBarTime;
 
-        for (var k = 0; k < appArray.length; k++) {
-            if (activeArray[k] == true) {
-                var index = appArray[k];
-                openArray = stats[index]['open'];
-                closeArray = stats[index]['close'];
+        for (var k = 0; k < lines_appArray.length; k++) {
+            if (lines_activeArray[k] == true) {
+                var index = lines_appArray[k];
+                openArray = lines_stats[index]['open'];
+                closeArray = lines_stats[index]['close'];
                 var track = 0;
 
                 renderArray = [];
                 for (var i = 0; i < openArray.length; i++) {
                     if ((openArray[i] > leftBarTime) && (closeArray[i] < rightBarTime)) {
-                        renderArray[track] = ((openArray[i] - leftBarTime) / (diff / lineGraphWidth));
+                        renderArray[track] = ((openArray[i] - leftBarTime) / (lines_diff/ lineGraphWidth));
                         track++;
                     }
                 }
@@ -455,22 +215,21 @@ var lines_init = function() {
         index = index.replace('.', '-');
         index = index.replace('.', '-');
         $("." + index).remove();
-        activeArray[k] = false;
+        lines_activeArray[k] = false;
     }
 
     function addAppBack(k) {
         //initial loading of lines
-        activeArray[k] = true;
+        lines_activeArray[k] = true;
         calculateRender($("#timeline").rangeSlider("min"), $("#timeline").rangeSlider("max"), 1);
     }
 
     function toggleApps(circ) {
-        console.log("yo")
         //initial loading of lines
         if (toggle == true) {
-            circ.setFillRadialGradientColorStops([0, '#C6C9D0', 1, 'white']);
-            for (var k = 0; k < activeArray.length; k++) {
-                activeArray[k] = true;
+            circ.setFill('black');
+            for (var k = 0; k < lines_activeArray.length; k++) {
+                lines_activeArray[k] = true;
                 this.active = true;
                 boxes[k].setOpacity(1.0);
                 addAppBack(boxes[k].getId());
@@ -479,9 +238,10 @@ var lines_init = function() {
             calculateRender($("#timeline").rangeSlider("min"), $("#timeline").rangeSlider("max"), 1);
             toggle = false;
         } else {
-            circ.setFillRadialGradientColorStops([0, 'white', 1, '#C6C9D0']);
-            for (var k = 0; k < activeArray.length; k++) {
-                activeArray[k] = false;
+            circ.setFill('');
+            circ.setStroke('black');
+            for (var k = 0; k < lines_activeArray.length; k++) {
+                lines_activeArray[k] = false;
                 this.active = false;
                 boxes[k].setOpacity(0.3);
                 removeApp(boxes[k].getName(), boxes[k].getId());
@@ -495,20 +255,20 @@ var lines_init = function() {
     }
 
     function findMostUsedApp() {
-        var longest = stats[0].open.length;
-        var mostUsed = stats[0].url;
+        var longest = lines_stats[0].open.length;
+        var mostUsed = lines_stats[0].url;
 
-        for (var i = 0; i < stats.length; i++) {
-            var length = stats[i].open.length;
+        for (var i = 0; i < lines_stats.length; i++) {
+            var length = lines_stats[i].open.length;
             if (length > longest) {
                 longest = length;
-                mostUsed = stats[i].url;
+                mostUsed = lines_stats[i].url;
             }
         }
 
-        for (var i = 0; i < stats.length; i++) {
-            if (stats[i].url != mostUsed) {
-                activeArray[i] = false;
+        for (var i = 0; i < lines_stats.length; i++) {
+            if (lines_stats[i].url != mostUsed) {
+                lines_activeArray[i] = false;
             }
         }       
     }
@@ -533,14 +293,14 @@ var lines_init = function() {
 
             img.onerror = function(evt) {
                 this.onerror = null;
-                this.src = '/img/app_icons/favicon-default.gif';
+                this.src = 'img/app_icons/social-networks-square.png';
             };
         }
     }
 
     function setUpAppSelection() {
-        if (width_count > appArray.length + 1)
-            width_count = appArray.length + 1;
+        if (width_count > lines_appArray.length + 1)
+            width_count = lines_appArray.length + 1;
 
         var stage = new Kinetic.Stage({
             container : 'container',
@@ -556,15 +316,17 @@ var lines_init = function() {
         boxes = [];
 
         var sources = {};
-        for (var j = 0; j < appArray.length; j++) {
-            sources[nameArray[j]] = "http://" + nameArray[j] + "/favicon.ico";
+
+        for (var j = 0; j < lines_appArray.length; j++) {
+            var img_name = nameArray[j].split(".")[0];
+            sources[nameArray[j]] = "img/app_icons/" + img_name + "-square.png";
         }
 
         // create images
         loadImages(sources, function(images) {
             var k = 1;
             for (var src in sources) {
-                //for (var k = 0; k < appArray.length; k++) {
+                //for (var k = 0; k < lines_appArray.length; k++) {
                 // anonymous function to induce scope
                 (function() {
                     colortrack = colorArray[k];
@@ -576,7 +338,7 @@ var lines_init = function() {
                         newx = (k % width_count) * box_size;
 
                     var img = images[src];
-                    var isActive = activeArray[k - 1];
+                    var isActive = lines_activeArray[k - 1];
                     var opac = 1.0;
                     if(isActive == false){
                         opac = 0.3;
@@ -587,8 +349,9 @@ var lines_init = function() {
                         y : newy,
                         width : 20,
                         height : 20,
-                        id : appArray[k - 1],
+                        id : lines_appArray[k - 1],
                         name : nameArray[k - 1],
+                        colorHover: colorArray[k - 1],
                         active : true,
                         opacity : opac,
                         fillPatternImage : img,
@@ -614,12 +377,12 @@ var lines_init = function() {
                         tweenPath();
                     });
                     box.on('mouseover', function() {
-                        this.setFill(colorset);
-                        if (activeArray[this.getId()] == false) {
+                        this.setFill("hsl(" + this.attrs.colorHover + ",50%, 50%)");
+                        if (lines_activeArray[this.getId()] == false) {
                             this.setOpacity(1.0);
-                            activeArray[this.getId()] = true;
+                            lines_activeArray[this.getId()] = true;
                             calculateRender($("#timeline").rangeSlider("min"), $("#timeline").rangeSlider("max"), 1);
-                            activeArray[this.getId()] = false;
+                            lines_activeArray[this.getId()] = false;
                             this.active = false;
                         } else {
                             this.active = true;
@@ -631,7 +394,7 @@ var lines_init = function() {
                     box.on('mouseout', function() {
                         this.setFill(null);
                         this.setFillPatternImage(img);
-                        if (activeArray[this.getId()] == false) {
+                        if (lines_activeArray[this.getId()] == false) {
                             this.active = false;
                             this.setOpacity(.3);
                         } else {
@@ -659,12 +422,8 @@ var lines_init = function() {
             var circle = new Kinetic.Circle({
                 x : 10,
                 y : 10,
-                radius : 10,
-                fillRadialGradientStartPoint : 0,
-                fillRadialGradientStartRadius : 0,
-                fillRadialGradientEndPoint : 0,
-                fillRadialGradientEndRadius : 10,
-                fillRadialGradientColorStops : [0, '#C6C9D0', 1, 'white'],
+                radius : 9,
+                fill: 'black',
                 stroke : 'white',
                 name : "Toggle",
                 strokeWidth : 1
@@ -706,7 +465,7 @@ var lines_init = function() {
         var date = x.attributes.number.value;
         var val = new Date(date * 1000);
         //console.log(val.format("dd-m-yy"));
-        printTheStats(x.attributes.name.value, "username", $.datepicker.formatDate('MM dd, yy', val), val.toLocaleTimeString());
+        printThelines_stats(x.attributes.name.value, "username", $.datepicker.formatDate('MM dd, yy', val), val.toLocaleTimeString());
         show_stats();
     }
 
@@ -747,7 +506,7 @@ var lines_init = function() {
         fieldNameElement.appendChild(fieldNameElement.ownerDocument.createTextNode(d));
     }
 
-    function printTheStats(s, u, l, t) {
+    function printThelines_stats(s, u, l, t) {
         printThatApp(s);
         //printUsername(u);
         printLastVisit(l);

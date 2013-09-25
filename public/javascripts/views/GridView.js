@@ -7,6 +7,7 @@ app.views.GridView = Backbone.View.extend({
   className: 'vis',
   // default width of 1024
   width: 1024,
+  //width: 960,
   apps: [],
   expanded_apps: [],
   expanded_corners: [],
@@ -25,6 +26,7 @@ app.views.GridView = Backbone.View.extend({
 
   initialize: function() {
     // set the width to the width of body
+    //this.width = WINDOW_WIDTH;
     this.width = WINDOW_WIDTH;
     this.height = WINDOW_HEIGHT;
     this.$el.width(this.width);

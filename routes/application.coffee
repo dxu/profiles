@@ -38,7 +38,6 @@ exports.open = (req, res) ->
       $push: {open: req.body.open_date},
       $inc: {open_count: 1},
       $set: {
-              category: req.body.category,
               userid: req.body.userid,
               url: url,
               img: req.body.img_url
@@ -108,7 +107,7 @@ exports.focus_pair = (req, res) ->
     { userid: req.body.userid, url: req.body.url },
     {
       $push: {focus: req.body.focus_time, unfocus: req.body.unfocus_time},
-      $inc: {focus_count: 1},
+      $inc: {focus_count: 1, unfocus_count: 1},
     },
     {upsert: false},
     (err, results) ->

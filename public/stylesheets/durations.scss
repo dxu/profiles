@@ -1,5 +1,9 @@
 @import "definitions";
 
+#durations::-webkit-scrollbar {
+    display: none;
+}
+
 #durations {
     height: 100%;
     position: relative;
@@ -7,7 +11,11 @@
     #durations-wrapper {
         display: block;
         width: 960px;
+        height: 200px;
+        overflow-y: scroll;
+        overflow-x: hidden;
         margin: 0 auto;
+
 
         &:after {
             content: " ";
@@ -17,9 +25,14 @@
         }
     }
 
+    .durations-clear {
+            display: block;
+            height: 0;
+            clear: both;
+    }
+
     #durations-canvas { // width is set in css because canvas has width attr
         float: left;
-        height: auto;
     }
 
     #durations-sidebar {
@@ -41,6 +54,41 @@
                 right: 0;
             }
             padding: 0 !important;
+        }
+    }
+
+    #durations-panel {
+        display: block;
+        margin: {
+            top: 20px;
+            right: auto;
+            bottom: 0px;
+            left: auto;
+        }
+
+        width: 960px;
+        #durations-slider {
+            margin: 0 auto;
+            z-index: 99;
+        }
+
+        #durations-details {
+            width: 960px;
+            height: 70px;
+            position: relative;
+            z-index: 0;
+
+            #durations-dateLeft {
+                position: absolute;
+                left: 0;
+                bottom: 0;
+            }
+
+            #durations-dateRight {
+                position: absolute;
+                right: 0;
+                bottom: 0;
+            }
         }
     }
 }

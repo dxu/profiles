@@ -282,7 +282,6 @@ clusters_init = function(){
                     console.log("error in change category: " + data["error"]);
                 }
                 else {
-                    console.log(data); 
                     update_app_category(d, selecting, dragging);
                 }
             });
@@ -359,8 +358,7 @@ clusters_init = function(){
                 break;
             }
         }
-        console.log("new category is " + new_category);
-        console.log("old category is " + old_category);
+
         // add the app to the add cluster
         add_cluster.apps.push(app);
 
@@ -763,9 +761,16 @@ clusters_init = function(){
     }
 
     function hoverFunction(x){
+        if(x.attributes.close_id.value != "undefined NaN, NaN"){
         printClusterStats(x.attributes.url_id.value, "username",
                         x.attributes.close_id.value,
                         x.attributes.timeStamp.value);
+    }
+    else{
+         printClusterStats(x.attributes.url_id.value, "username",
+                        "No Visits",
+                        "");       
+    }
         show_stats();
         // TODO: change so it will just be in the css
         document.body.style.cursor = 'pointer';

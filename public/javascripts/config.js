@@ -2,6 +2,7 @@ var VIS_COUNT = 4;
 
 var APP_DATA = [],
     CAT_DATA = {},
+    COLORS = [],
     WINDOW_WIDTH = $(window).width(),
     WINDOW_HEIGHT = $(window).height(),
     app = {
@@ -60,12 +61,19 @@ $(function() {
          CAT_DATA[cat] = _.where(data.apps, {category: cat});
         });
 
+        var color_num = 0,
+            app_length = APP_DATA.apps.length;
+
+        for (var i = 0; i < app_length; i++) {
+            color_num = i * (360 / app_length);
+            COLORS[i] = "hsl(" + color_num + ",50%, 50%)";
+        }
+
         init();
 
       }
     });
 });
-
 
 var init = function() {
     clusters_init();

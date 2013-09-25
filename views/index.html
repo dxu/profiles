@@ -23,6 +23,8 @@
     <script type="text/javascript" src="javascripts/views/ApplicationView.js"></script>
     <script type="text/javascript" src="javascripts/Cluster.js"></script>
     <script type="text/javascript" src="javascripts/clusters.js"></script>
+    <script type="text/javascript" src="javascripts/timeline.js"></script>
+    <script type="text/javascript" src="javascripts/durations_slider.js"></script>
     <script type="text/javascript" src="javascripts/lines.js"></script>
     <script type="text/javascript" src="javascripts/main.js"></script>
     <script type="text/javascript" src="javascripts/views/GridView.js"></script>
@@ -54,7 +56,7 @@
                 <li>
                     <img class="menu-button"
                          id="durations-toggle"
-                         src="img/ui_icons/durations.png"/><!-- change-->
+                         src="img/ui_icons/durations.png"/>
                 </li>
             </ul>
         </nav>
@@ -90,11 +92,11 @@
 
         <!-- LINES -->
         <div id="lines" class="vis">
-            <div id="container">
                  <img class="menu-button"
                     id="container-toggle"
                     src="img/ui_icons/up.png"
-                    style= "position: relative; bottom: -15px;"/>
+                    style="position: absolute; top: -25px; display: block; left: 49%; margin: auto;"/>
+            <div id="container">
             </div>
             <div id="appname">
             </div>
@@ -161,6 +163,24 @@
                 <div id="durations-sidebar"></div>
                 <canvas id="durations-canvas"></canvas>
                 <div class="durations-clear"></div>
+                <!--
+                <div id="durations-panel">
+                    <div id="durations-slider"></div>
+                        <div id="durations-details">
+                            <span id="durations-dateLeft"> </span>
+                            <span id="durations-dateRight"> </span>
+                        </div>
+                    </div>
+                </div>
+                -->
+            </div><!-- end #durations-wrapper -->
+            <div id="durations-panel">
+                <div id="durations-slider"></div>
+                    <div id="durations-details">
+                        <span id="durations-dateLeft"> </span>
+                        <span id="durations-dateRight"> </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

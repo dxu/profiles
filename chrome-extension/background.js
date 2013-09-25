@@ -215,23 +215,6 @@ function decrementDomainCount(domain) {
   storage.set({"activeDomains": activeDomains});
 };
 
-// Return the category of an app domain
-function getCategory(domain) {
-  // naive hashfunction so I can avoid storing categories lolol
-  // that's a job for the backend
-  // pass the buck
-  var r = domain.length % 3
-  if (r == 0) {
-    return "social";
-  }
-  else if (r == 1) {
-    return "productivity";
-  }
-  else {
-    return "entertainment";
-  }
-}
-
 // Gets the list of approved apps for tracking
 function getWhitelist() {
   $.getJSON(baseUrl + "/users/" + userid + "/whitelist.json",
@@ -294,7 +277,6 @@ function postToOpen(domain) {
   var posixTime = getCurrentTime();
 
   var postData = {
-    "category": getCategory(domain),
     "userid": userid,
     "open_date": posixTime,
     "url": domain,
